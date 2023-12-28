@@ -1,10 +1,10 @@
 # employees
 http service for employees that provides data about them
 
-POST for Create new employee "/"
-PUT for Update employee "/:id"
-DELETE for delete employee "/:id"
-GET "/company/:id" to get all employees with this company
+POST for Create new employee "/";
+PUT for Update employee "/:id";
+DELETE for delete employee "/:id";
+GET "/company/:id" to get all employees with this company;
     "/departament/company_id/departament_name" to get all employees with this department in company
 
 
