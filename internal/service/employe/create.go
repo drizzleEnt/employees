@@ -8,11 +8,11 @@ import (
 
 func (s *Service) Create(ctx context.Context, employee *model.Employee) (int, error) {
 
-	id, err := s.repository.Create(ctx, employee)
+	res, err := s.repository.Create(ctx, employee)
 
 	if err != nil {
 		return 0, err
 	}
 
-	return id, nil
+	return res, nil
 }

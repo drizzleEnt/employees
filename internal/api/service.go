@@ -31,7 +31,7 @@ func (h *Handler) InitRoutes() *gin.Engine {
 
 		departamentEmp := router.Group("/departament")
 		{
-			departamentEmp.GET("/:departament_id", h.GetWithDepartament)
+			departamentEmp.GET("/:com/:dep", h.GetWithDepartament)
 		}
 	}
 

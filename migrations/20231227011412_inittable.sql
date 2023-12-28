@@ -17,8 +17,9 @@ CREATE TABLE passport(
 CREATE TABLE departament(
     id serial primary key,
     employee_id int REFERENCES employee (id) on DELETE  CASCADE NOT NULL,
-    name varchar(255) not null,
-    phone varchar(255) not null
+    company_id INT NOT NULL DEFAULT '1',
+    depname varchar(255) not null,
+    depphone varchar(255) not null
 );
 
 
@@ -26,5 +27,5 @@ CREATE TABLE departament(
 -- +goose Down
 DROP TABLE departament;
 DROP TABLE passport;
-DROP TABLE emolyee;
+DROP TABLE employee;
 

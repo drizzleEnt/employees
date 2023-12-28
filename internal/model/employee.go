@@ -5,7 +5,7 @@ type Employee struct {
 	Name        string      `json:"name" db:"name"`
 	Surname     string      `json:"surname" db:"surname"`
 	Phone       string      `json:"phone" db:"phone"`
-	CompanyId   int         `json:"companyId" db:"company"`
+	CompanyId   int         `json:"companyId" db:"companyid"`
 	Passport    Passport    `db:""`
 	Departament Departament `db:""`
 }
@@ -16,6 +16,6 @@ type Passport struct {
 }
 
 type Departament struct {
-	Name  string `json:"name" db:"name"`
-	Phone string `json:"phone" db:"phone"`
+	Name  string `json:"name" db:"depname"`
+	Phone string `json:"phone" db:"depphone"`
 }

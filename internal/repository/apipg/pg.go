@@ -7,10 +7,11 @@ import (
 	"github.com/drizzleent/emplyees/internal/client/db"
 	"github.com/drizzleent/emplyees/internal/model"
 	"github.com/drizzleent/emplyees/internal/repository"
+	"github.com/georgysavva/scany/pgxscan"
 )
 
 const (
-	idColumn = "id"
+	idColumn = "employee.id"
 
 	employeeTable         = "employee"
 	employeeNameColumn    = "name"
@@ -19,13 +20,16 @@ const (
 	employeeCompanyColumn = "companyid"
 	employeeIdColumn      = "employee_id"
 
-	passportTable = "passport"
-	typeColumn    = "type"
-	numberColumn  = "number"
+	passportTable    = "passport"
+	typeColumn       = "type"
+	numberColumn     = "number"
+	passportIdColumn = "passport.employee_id"
 
 	departamentTable = "departament"
-	depNameColumn    = "name"
-	depPhoneColumn   = "phone"
+	depNameColumn    = "depname"
+	depPhoneColumn   = "depphone"
+	depIdColumn      = "departament.employee_id"
+	depCompanyId     = "company_id"
 )
 
 type repo struct {
@@ -47,8 +51,8 @@ func (r *repo) Create(ctx context.Context, employee *model.Employee) (int, error
 		QuaryRow: quary,
 	}
 	args := []interface{}{employee.Name, employee.Surname, employee.Phone, employee.CompanyId}
-	var id int
 
+	var id int
 	err := r.db.DB().QuaryRowContext(ctx, q, args...).Scan(&id)
 	if err != nil {
 		return 0, err
@@ -64,14 +68,14 @@ func (r *repo) Create(ctx context.Context, employee *model.Employee) (int, error
 	args = []interface{}{id, employee.Passport.Type, employee.Passport.Number}
 	r.db.DB().QuaryRowContext(ctx, q, args...)
 
-	quary = fmt.Sprintf("INSERT INTO %s (%s, %s, %s) values ($1, $2, $3)",
-		departamentTable, employeeIdColumn, depNameColumn, depPhoneColumn)
+	quary = fmt.Sprintf("INSERT INTO %s (%s, %s, %s, %s) values ($1, $2, $3, $4)",
+		departamentTable, employeeIdColumn, depNameColumn, depPhoneColumn, depCompanyId)
 
 	q = db.Quary{
 		Name:     "repository.pg.create.deprtamentTable",
 		QuaryRow: quary,
 	}
-	args = []interface{}{id, employee.Departament.Name, employee.Departament.Phone}
+	args = []interface{}{id, employee.Departament.Name, employee.Departament.Phone, employee.CompanyId}
 	r.db.DB().QuaryRowContext(ctx, q, args...)
 
 	return id, nil
@@ -112,7 +116,7 @@ func (r *repo) Update(ctx context.Context, employee *model.Employee) error {
 	}
 
 	quary = fmt.Sprintf("UPDATE %s SET %s=$1, %s=$2 WHERE %s=$3",
-		passportTable, typeColumn, numberColumn, idColumn)
+		passportTable, typeColumn, numberColumn, passportIdColumn)
 
 	q = db.Quary{
 		Name:     "repository.pg.update.passportTable",
@@ -127,15 +131,15 @@ func (r *repo) Update(ctx context.Context, employee *model.Employee) error {
 		return fmt.Errorf("failed to update employee passport: %v, tag: %v", err, res)
 	}
 
-	quary = fmt.Sprintf("UPDATE %s SET %s=$1, %s=$2 WHERE %s=$3",
-		departamentTable, depNameColumn, depPhoneColumn, idColumn)
+	quary = fmt.Sprintf("UPDATE %s SET %s=$1, %s=$2, %s=$3 WHERE %s=$4",
+		departamentTable, depNameColumn, depPhoneColumn, depCompanyId, depIdColumn)
 
 	q = db.Quary{
 		Name:     "repository.pg.update.departamentTable",
 		QuaryRow: quary,
 	}
 
-	args = []interface{}{employee.Departament.Name, employee.Departament.Phone, employee.Id}
+	args = []interface{}{employee.Departament.Name, employee.Departament.Phone, employee.CompanyId, employee.Id}
 
 	res, err = r.db.DB().ExecContext(ctx, q, args...)
 
@@ -145,9 +149,53 @@ func (r *repo) Update(ctx context.Context, employee *model.Employee) error {
 
 	return nil
 }
-func (r *repo) GetWithCompany(ctx context.Context, companyId int) ([]*model.Employee, error) {
-	return nil, nil
+func (r *repo) GetWithCompany(ctx context.Context, companyId int) ([]model.Employee, error) {
+	quary := fmt.Sprintf("SELECT %s, %s, %s, %s, %s, %s, %s, %s FROM %s JOIN %s ON %s = %s JOIN %s ON %s = %s WHERE %s = $1",
+		employeeNameColumn, employeeSurnameColumn, employeePhoneColumn, employeeCompanyColumn, typeColumn, numberColumn, depNameColumn, depPhoneColumn,
+		employeeTable, passportTable, passportIdColumn, idColumn, departamentTable, idColumn, depIdColumn, employeeCompanyColumn)
+
+	q := db.Quary{
+		Name:     "repository.pg.get_with_company.employeeTable",
+		QuaryRow: quary,
+	}
+
+	agrs := []interface{}{companyId}
+	rows, err := r.db.DB().QuaryContext(ctx, q, agrs...)
+	if err != nil {
+		return nil, err
+	}
+	res := make([]model.Employee, 1)
+
+	err = pgxscan.ScanAll(&res, rows)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
-func (r *repo) GetWithDepartament(ctx context.Context, companyId int, departmentId int) ([]*model.Employee, error) {
-	return nil, nil
+func (r *repo) GetWithDepartament(ctx context.Context, dep string, id int) ([]model.Employee, error) {
+
+	quary := fmt.Sprintf("SELECT %s, %s, %s, %s, %s, %s, %s, %s FROM %s JOIN %s ON %s = %s JOIN %s ON %s = %s WHERE %s = $1 AND %s = $2",
+		employeeNameColumn, employeeSurnameColumn, employeePhoneColumn, employeeCompanyColumn, typeColumn, numberColumn, depNameColumn, depPhoneColumn,
+		employeeTable, passportTable, passportIdColumn, idColumn, departamentTable, idColumn, depIdColumn, depNameColumn, employeeCompanyColumn)
+	q := db.Quary{
+		Name:     "repository.pg.get_with_departament.employeeTable",
+		QuaryRow: quary,
+	}
+
+	args := []interface{}{dep, id}
+	rows, err := r.db.DB().QuaryContext(ctx, q, args...)
+
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]model.Employee, 1)
+
+	err = pgxscan.ScanAll(&res, rows)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
